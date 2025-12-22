@@ -13,7 +13,11 @@ if ENV_FILE:
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = env.get("APP_SECRET_KEY")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+
+# Use absolute path for database to ensure consistency across scripts
+basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
+
 app.config['UPLOAD_FOLDER'] = os.getcwd()+'/bemo/static/'
 print("UPLOAD_FOLDER",app.config['UPLOAD_FOLDER'])
 app.config['CLIENT_ID'] = env.get("AUTH0_CLIENT_ID")

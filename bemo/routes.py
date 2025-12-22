@@ -160,9 +160,8 @@ def new_login():
 @requires_auth
 def dashboard():
   user = User.query.filter_by(id=session['id']).first()
-  solved = Submission.query.filter_by(user_id=user.id,correct=True).all()
-  solved = list(set([Problem.query.filter_by(id=sub.problem_id).first().title for sub in solved]))
-  solved_str = json.dumps(solved)
+  solved_titles = [p.title for p in user.solved_problems]
+  solved_str = json.dumps(solved_titles)
   return render_template('dashboard.html', user=user,solved=solved_str)
 
 @app.route('/payment')
@@ -299,18 +298,16 @@ def show_sub(sub_id):
     user = None
     if 'id' in session:
       user = User.query.filter_by(id=session['id']).first()
-    if sub.correct == sub.cases and user.id==sub.user_id:#TODO: relationship should be many not single
-        user_solved = json.loads(user.solved)
-        if problem.id not in user_solved:
-            user_solved.append(problem.id)
-            user.solved = json.dumps(user_solved)
+    if sub.correct == sub.cases and user.id==sub.user_id:
+        if problem not in user.solved_problems:
+            user.solved_problems.append(problem)
+            problem.solved += 1
             db.session.commit()
-        print("Accepted")
-        problem.solved += 1
-        db.session.commit()
-        if(problem.solved==1):
-            problem.solver = user.id
-    #if problem.solver==user.id: TODO: gift cards or paypal payouts
+            print("Accepted")
+            
+            if problem.solved == 1:
+                # TODO: gift cards or paypal payouts for first solver
+                pass
         
     return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status)
 

@@ -1,6 +1,11 @@
 from datetime import datetime, timezone
 from bemo import db, app
 
+solves = db.Table('solves',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('problem_id', db.Integer, db.ForeignKey('problem.id'), primary_key=True)
+)
+
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   sub = db.Column(db.String(120), unique=True, nullable=False)
@@ -13,7 +18,8 @@ class User(db.Model):
   score = db.Column(db.Integer, nullable=False, default=0)
   contribution = db.Column(db.Integer, nullable=False, default=0)
   setup = db.Column(db.Boolean, nullable=False, default=False)
-  #solved = db.Column(db.Text, nullable=False, default='[]')
+  solved_problems = db.relationship('Problem', secondary=solves, lazy='subquery',
+        backref=db.backref('solvers', lazy=True))
 
 class Problem(db.Model):
   id = db.Column(db.Integer, primary_key=True)
