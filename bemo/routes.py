@@ -233,10 +233,10 @@ def show_prob(prob_id):
         return redirect(url_for('show_prob', prob_id=prob_id))
       bytes_code = None
       if form.code.data is None and form.code_area.data is not None:
-        print("Recieved", form.code_area.data)
+        print("Received", form.code_area.data)
         bytes_code = base64.b64encode(bytes(form.code_area.data,'utf-8')).decode('ascii')
       else:
-        print("Recieved", form.code.data)
+        print("Received", form.code.data)
         bytes_code = base64.b64encode(form.code.data.read()).decode('ascii')
       
       try:

@@ -101,8 +101,10 @@
 		
 		// Set initial mode based on default selection
 		var initialLanguage = languageSelect.value;
-		var initialMode = languageModes[initialLanguage] || 'c_cpp';
-		editor.session.setMode("ace/mode/" + initialMode);
+		if (initialLanguage) {
+			var initialMode = languageModes[initialLanguage] || 'c_cpp';
+			editor.session.setMode("ace/mode/" + initialMode);
+		}
 	}
 </script>
 {% endblock content %}

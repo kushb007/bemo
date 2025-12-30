@@ -9,14 +9,13 @@ def migrate_add_language_column():
     with app.app_context():
         try:
             # Check if column exists
-            with db.engine.connect() as conn:
+            with db.engine.begin() as conn:  # Use begin() for automatic transaction management
                 result = conn.execute(text("PRAGMA table_info(submission)"))
                 columns = [row[1] for row in result]
                 
                 if 'language_id' not in columns:
                     print("Adding language_id column to submission table...")
                     conn.execute(text("ALTER TABLE submission ADD COLUMN language_id VARCHAR(10) DEFAULT '54'"))
-                    conn.commit()
                     print("Column added successfully!")
                 else:
                     print("Column language_id already exists in submission table.")
