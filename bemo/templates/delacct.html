@@ -1,3 +1,29 @@
 {% extends "layout.html"%}
-<input type="submit" onclick="return confirm('Are you sure?')" />
-{%endblock content%}
+{% block content %}
+<div class="container mt-4">
+	<div class="row justify-content-center">
+		<div class="col-md-6">
+			<div class="card shadow-sm border-danger">
+				<div class="card-header bg-danger text-white">
+					<h3 class="mb-0">⚠️ Delete Account</h3>
+				</div>
+				<div class="card-body">
+					<div class="alert alert-warning" role="alert">
+						<h5 class="alert-heading">Warning!</h5>
+						<p>This action cannot be undone. Deleting your account will permanently remove:</p>
+						<ul>
+							<li>Your profile information</li>
+							<li>All your submissions</li>
+							<li>Your score and achievements</li>
+						</ul>
+					</div>
+					<form method="POST" action="" onsubmit="return confirm('Are you absolutely sure you want to delete your account? This action cannot be undone!');">
+						<input type="submit" value="Delete My Account" class="btn btn-danger btn-lg w-100" />
+					</form>
+					<a href="{{url_for('dashboard')}}" class="btn btn-secondary mt-3 w-100">Cancel</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock content %}

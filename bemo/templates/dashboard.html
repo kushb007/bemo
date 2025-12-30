@@ -1,16 +1,51 @@
 {%extends "layout.html"%}
 {%block content%}
-    <div class="row">
-        <div class="col-5">
-            <img class="img-thumbnail rounded float-left" src="static/pics/{{user.img_file}}"/>
-        </div>
-        <div class="col-7">
-            <h1>{{user.username}}</h1>
-            <h2>{{user.firstname}} {{user.lastname}}</h2>
-            <h3>Solved: {{solved}}</h3>
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center mb-3 mb-md-0">
+                    <img class="img-thumbnail rounded-circle shadow" src="static/pics/{{user.img_file}}" style="width: 150px; height: 150px; object-fit: cover;"/>
+                </div>
+                <div class="col-md-9">
+                    <h1 class="mb-2">{{user.username}}</h1>
+                    <h4 class="text-muted mb-3">{{user.firstname}} {{user.lastname}}</h4>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title mb-0">Problems Solved</h5>
+                                    <h2 class="mt-2">{{solved}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title mb-0">Score</h5>
+                                    <h2 class="mt-2">{{user.score}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title mb-0">Contribution</h5>
+                                    <h2 class="mt-2">{{user.contribution}}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col">
+                    <a class="btn btn-primary btn-lg w-100" href="{{url_for('editacct')}}" role="button">
+                        <i class="bi bi-pencil"></i> Update Account
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="row">
-            <a class="btn btn-primary" href="{{url_for('editacct')}}" role="button">Update Account</a>
-    </div>
+</div>
 {%endblock content%}
