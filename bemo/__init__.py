@@ -6,6 +6,7 @@ from os import environ as env
 import os
 from dotenv import load_dotenv, find_dotenv
 import io
+import stripe
 
 ENV_FILE = find_dotenv()
 if ENV_FILE:
@@ -22,6 +23,9 @@ app.config['UPLOAD_FOLDER'] = os.getcwd()+'/bemo/static/'
 print("UPLOAD_FOLDER",app.config['UPLOAD_FOLDER'])
 app.config['CLIENT_ID'] = env.get("AUTH0_CLIENT_ID")
 app.config['SQUARE_ACCESS_TOKEN'] = env.get("SQUARE_ACCESS_TOKEN")
+app.config['STRIPE_API_KEY'] = env.get("STRIPE_API_KEY")
+stripe.api_key = app.config['STRIPE_API_KEY']
+
 app.config['CACHE_TYPE'] = 'SimpleCache'  # or 'RedisCache' for Redis
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache timeout in seconds
 cache = Cache(app)

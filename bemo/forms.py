@@ -62,4 +62,8 @@ class Code(FlaskForm):
 	code_area = HiddenField("TextArea",id="code_input", name="code_input")
 	submit = SubmitField('submit')
 
+class PayoutSettings(FlaskForm):
+    submit = SubmitField('Connect with Stripe to Receive Payouts')
+
+
 

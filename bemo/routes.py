@@ -3,13 +3,14 @@ import requests
 import os
 from os import environ as env
 import secrets
+import stripe
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.utils import secure_filename
 from PIL import Image
 from functools import wraps
 from urllib.parse import quote_plus, urlencode
 from bemo import app, db, session, oauth, cache
-from bemo.forms import Confirm, Picture, Code
+from bemo.forms import Confirm, Picture, Code, PayoutSettings
 from bemo.models import User, Problem, Submission
 import random
 import http.client
@@ -315,6 +316,86 @@ def show_prob(prob_id):
         return redirect(url_for('show_prob', prob_id=prob_id))
     return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags))
 
+def check_milestones_and_pay(user):
+    milestones = {
+        1: 100,    # $1.00 for 1st first-solve
+        5: 500,    # $5.00 for 5th first-solve
+        10: 2000   # $20.00 for 10th first-solve
+    }
+    
+    if user.first_solves in milestones and user.last_milestone_paid < user.first_solves:
+        amount = milestones[user.first_solves]
+        if user.stripe_account_id:
+            try:
+                # Create a transfer to the connected account
+                transfer = stripe.Transfer.create(
+                    amount=amount,
+                    currency="usd",
+                    destination=user.stripe_account_id,
+                    description=f"Reward for solving {user.first_solves} problems first!"
+                )
+                user.last_milestone_paid = user.first_solves
+                db.session.commit()
+                print(f"Paid {amount} to {user.username} (Transfer ID: {transfer.id})")
+            except Exception as e:
+                print(f"Payout failed: {e}")
+        else:
+             print(f"User {user.username} earned reward but no Stripe account connected.")
+
+@app.route('/payout-settings', methods=['GET', 'POST'])
+@requires_auth
+def payout_settings():
+    user = User.query.filter_by(id=session['id']).first()
+    form = PayoutSettings()
+    
+    if form.validate_on_submit():
+        try:
+            # Create Express Account if not exists
+            if not user.stripe_account_id:
+                account = stripe.Account.create(
+                    type="express",
+                    country="IN",
+                    email=user.email,
+                    capabilities={
+                        "transfers": {"requested": True},
+                    },
+                    business_type="individual",
+                    individual={
+                        "first_name": user.firstname,
+                        "last_name": user.lastname,
+                        "email": user.email,
+                    },
+                    business_profile={
+                        "url": url_for('show_user', username=user.username, _external=True),
+                        "mcc": "8299",
+                        "product_description": "Competitive programming rewards"
+                    }
+                )
+                user.stripe_account_id = account.id
+                db.session.commit()
+            
+            # Create account link for onboarding
+            account_link = stripe.AccountLink.create(
+                account=user.stripe_account_id,
+                refresh_url=url_for('payout_settings', _external=True),
+                return_url=url_for('stripe_return', _external=True),
+                type="account_onboarding",
+            )
+            
+            return redirect(account_link.url)
+            
+        except Exception as e:
+            flash(f"Error setting up Stripe: {str(e)}", 'danger')
+            print(e)
+
+    return render_template('payout_settings.html', form=form, user=user)
+
+@app.route('/stripe-return')
+@requires_auth
+def stripe_return():
+    flash("Payout settings configured successfully! You can now receive rewards.", "success")
+    return redirect(url_for('dashboard'))
+
 @app.route('/submission/<int:sub_id>')
 @cache.cached(timeout=60, query_string=True)
 def show_sub(sub_id):
@@ -421,12 +502,15 @@ def show_sub(sub_id):
         if problem not in user.solved_problems:
             user.solved_problems.append(problem)
             problem.solved += 1
-            db.session.commit()
-            print("Accepted")
             
             if problem.solved == 1:
-                # TODO: gift cards or paypal payouts for first solver
-                pass
+                user.first_solves += 1
+                db.session.commit()
+                check_milestones_and_pay(user)
+            else:
+                db.session.commit()
+                
+            print("Accepted")
         
     return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status)
 

@@ -18,6 +18,9 @@ class User(db.Model):
   score = db.Column(db.Integer, nullable=False, default=0)
   contribution = db.Column(db.Integer, nullable=False, default=0)
   setup = db.Column(db.Boolean, nullable=False, default=False)
+  stripe_account_id = db.Column(db.String(120), nullable=True)
+  first_solves = db.Column(db.Integer, nullable=False, default=0)
+  last_milestone_paid = db.Column(db.Integer, nullable=False, default=0)
   solved_problems = db.relationship('Problem', secondary=solves, lazy='subquery',
         backref=db.backref('solvers', lazy=True))
 

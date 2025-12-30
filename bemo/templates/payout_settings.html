@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="content-section">
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Payout Settings</legend>
+            <p>Click the button below to connect your bank account securely via Stripe to receive rewards.</p>
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+        </div>
+    </form>
+    {% if user.stripe_account_id %}
+        <div class="alert alert-success">
+            Stripe Account Connected: {{ user.stripe_account_id }}
+        </div>
+    {% endif %}
+</div>
+{% endblock content %}
