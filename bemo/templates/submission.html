@@ -1,7 +1,29 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>{{problem.title}}</h2>
-<h3>{{user.username}}</h3>
-<h2>{{msg1}}</h2>
-<h3>{{msg2}}</h3>
+<div class="container mt-4">
+	<div class="card shadow-sm">
+		<div class="card-header bg-primary text-white">
+			<h3 class="mb-0">Submission Status</h3>
+		</div>
+		<div class="card-body">
+			<h4 class="mb-3">Problem: <strong>{{problem.title}}</strong></h4>
+			<h5 class="text-muted mb-4">Submitted by: {{user.username}}</h5>
+			
+			<div class="alert alert-info" role="alert">
+				<h5 class="alert-heading">{{msg1}}</h5>
+				<hr>
+				<p class="mb-0">{{msg2}}</p>
+			</div>
+			
+			<div class="mt-4">
+				<a href="{{url_for('show_prob',prob_id=problem.id)}}" class="btn btn-primary me-2">
+					Back to Problem
+				</a>
+				<a href="{{url_for('problems')}}" class="btn btn-secondary">
+					View All Problems
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
 {% endblock content %}
