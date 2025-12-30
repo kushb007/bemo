@@ -28,6 +28,10 @@
 			<form method="POST" action="" class="form-problem" enctype="multipart/form-data">
 				{{ form.hidden_tag() }}
 				<div class="form-group mb-3">
+					<label for="language" class="form-label fw-bold">Programming Language:</label>
+					{{form.language(class_="form-select", id="language-select")}}
+				</div>
+				<div class="form-group mb-3">
 					<label for="editor" class="form-label fw-bold">Code Editor:</label>
 					{%if form.code.errors%}
 						<div class="alert alert-danger">
@@ -59,9 +63,24 @@
 
 <script src="../static/ace-builds-1.5.0/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
+	// Language ID to ACE mode mapping
+	var languageModes = {
+		'71': 'python',      // Python
+		'62': 'java',        // Java
+		'54': 'c_cpp',       // C++
+		'50': 'c_cpp',       // C
+		'63': 'javascript',  // JavaScript
+		'78': 'kotlin',      // Kotlin
+		'60': 'golang',      // Go
+		'72': 'ruby',        // Ruby
+		'73': 'rust',        // Rust
+		'82': 'sql',         // SQL
+		'74': 'typescript'   // TypeScript
+	};
+	
 	var editor = ace.edit("editor");
 	editor.setTheme("ace/theme/monokai");
-	editor.session.setMode("ace/mode/c_cpp");
+	editor.session.setMode("ace/mode/c_cpp");  // Default mode
 	editor.setFontSize(14);
 	editor.setShowPrintMargin(false);
 	
@@ -70,5 +89,22 @@
 	editor.getSession().on('change', function(){
 		textarea.value = editor.getSession().getValue();
 	});
+	
+	// Change editor mode when language is selected
+	var languageSelect = document.getElementById('language-select');
+	if (languageSelect) {
+		languageSelect.addEventListener('change', function() {
+			var selectedLanguage = this.value;
+			var mode = languageModes[selectedLanguage] || 'c_cpp';
+			editor.session.setMode("ace/mode/" + mode);
+		});
+		
+		// Set initial mode based on default selection
+		var initialLanguage = languageSelect.value;
+		if (initialLanguage) {
+			var initialMode = languageModes[initialLanguage] || 'c_cpp';
+			editor.session.setMode("ace/mode/" + initialMode);
+		}
+	}
 </script>
 {% endblock content %}
