@@ -20,12 +20,12 @@ from re import escape
 
 auth0 = oauth.register(
     'auth0',
-    client_id=env.get("AUTH0_CLIENT_ID"),
-    client_secret=env.get("AUTH0_CLIENT_SECRET"),
+    client_id=app.config.get("AUTH0_CLIENT_ID"),
+    client_secret=app.config.get("AUTH0_CLIENT_SECRET"),
     client_kwargs={
         'scope': 'openid email profile',
     },
-    server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
+    server_metadata_url=f'https://{app.config.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
 )
 
 headers = {
@@ -559,13 +559,21 @@ def logout():
     session.clear()
     # Redirect user to logout endpoint
     flash('Logged out!')
+    
+    domain = app.config.get("AUTH0_DOMAIN")
+    client_id = app.config.get("AUTH0_CLIENT_ID")
+    
+    if not domain or not client_id:
+        flash("Error: Auth0 configuration missing.")
+        return redirect(url_for("home"))
+
     return redirect(
-        "https://" + env.get("AUTH0_DOMAIN")
+        "https://" + domain
         + "/v2/logout?"
         + urlencode(
             {
                 "returnTo": url_for("home", _external=True),
-                "client_id": env.get("AUTH0_CLIENT_ID"),
+                "client_id": client_id,
             },
             quote_via=quote_plus,
         )

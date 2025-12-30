@@ -8,9 +8,14 @@ from dotenv import load_dotenv, find_dotenv
 import io
 import stripe
 
-ENV_FILE = find_dotenv()
-if ENV_FILE:
-    load_dotenv(ENV_FILE)
+# Load environment variables from .env file in the same directory
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    ENV_FILE = find_dotenv()
+    if ENV_FILE:
+        load_dotenv(ENV_FILE)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = env.get("APP_SECRET_KEY")
@@ -21,7 +26,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'si
 
 app.config['UPLOAD_FOLDER'] = os.getcwd()+'/bemo/static/'
 print("UPLOAD_FOLDER",app.config['UPLOAD_FOLDER'])
-app.config['CLIENT_ID'] = env.get("AUTH0_CLIENT_ID")
+app.config['AUTH0_CLIENT_ID'] = env.get("AUTH0_CLIENT_ID")
+app.config['AUTH0_CLIENT_SECRET'] = env.get("AUTH0_CLIENT_SECRET")
+app.config['AUTH0_DOMAIN'] = env.get("AUTH0_DOMAIN")
 app.config['SQUARE_ACCESS_TOKEN'] = env.get("SQUARE_ACCESS_TOKEN")
 app.config['STRIPE_API_KEY'] = env.get("STRIPE_API_KEY")
 stripe.api_key = app.config['STRIPE_API_KEY']
