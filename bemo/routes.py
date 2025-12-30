@@ -33,6 +33,39 @@ headers = {
           'Content-Type': "application/json"
 }
 
+# Judge0 status codes mapping
+JUDGE0_STATUS = {
+    1: "In Queue",
+    2: "Processing",
+    3: "Accepted",
+    4: "Wrong Answer",
+    5: "Time Limit Exceeded",
+    6: "Compilation Error",
+    7: "Runtime Error (SIGSEGV)",
+    8: "Runtime Error (SIGXFSZ)",
+    9: "Runtime Error (SIGFPE)",
+    10: "Runtime Error (SIGABRT)",
+    11: "Runtime Error (NZEC)",
+    12: "Runtime Error (Other)",
+    13: "Internal Error",
+    14: "Exec Format Error"
+}
+
+# ACE editor modes for different languages
+LANGUAGE_MODES = {
+    '71': 'python',      # Python
+    '62': 'java',        # Java
+    '54': 'c_cpp',       # C++
+    '50': 'c_cpp',       # C
+    '63': 'javascript',  # JavaScript
+    '78': 'kotlin',      # Kotlin
+    '60': 'golang',      # Go
+    '72': 'ruby',        # Ruby
+    '73': 'rust',        # Rust
+    '82': 'sql',         # SQL
+    '74': 'typescript'   # TypeScript
+}
+
 #wraps functions to require auth0 token for access
 def requires_auth(f):
   @wraps(f)
@@ -194,8 +227,10 @@ def show_prob(prob_id):
     if form.submit.data and form.validate():
       print("File input",form.code.data)
       print("Text input",form.code_area.data)
+      print("Language",form.language.data)
       if form.code.data is None and form.code_area.data is None:
-        return "No code recieved"
+        flash('No code received. Please enter code or upload a file.', 'danger')
+        return redirect(url_for('show_prob', prob_id=prob_id))
       bytes_code = None
       if form.code.data is None and form.code_area.data is not None:
         print("Recieved", form.code_area.data)
@@ -203,36 +238,72 @@ def show_prob(prob_id):
       else:
         print("Recieved", form.code.data)
         bytes_code = base64.b64encode(form.code.data.read()).decode('ascii')
-      conn = http.client.HTTPSConnection("judge0-ce.p.rapidapi.com")
-      cases = {}
-      cases['submissions'] = []
-      print(result.inputs)
-      input_files = eval(result.inputs)
-      for input_file in input_files:
-          case = {}
-          case['language_id']='52' #C++ TODO: make dynamic
-          case['source_code']=bytes_code
-          with open(app.config['UPLOAD_FOLDER']+'/problem_data/'+input_file,'r') as f:
-              case['inputs']=f.read()
-          cases['submissions'].append(case)
-      payload = json.dumps(cases)
-      conn.request("POST", "/submissions/batch?base64_encoded=true", payload, headers)
-      res = conn.getresponse()
-      data = res.read()
-      print(data.decode("utf-8"))
-      tokens = []
-      for d in json.loads(data.decode("utf-8")):
-          print(d)
-          if 'token' in d:
-              tokens.append(d['token'])
-          else:
-              tokens.append(None)
-      tokens_string = json.dumps(tokens)
-      submission = Submission(user_id=session['id'],problem_id=prob_id,tokens=tokens_string,cases=result.cases)
-      db.session.add(submission)
-      db.session.commit()
-      submission_id = Submission.query.filter_by(tokens=tokens_string).first().id
-      return redirect('/submission/'+str(submission_id))
+      
+      try:
+        conn = http.client.HTTPSConnection("judge0-ce.p.rapidapi.com")
+        cases = {}
+        cases['submissions'] = []
+        print(result.inputs)
+        input_files = eval(result.inputs)
+        language_id = form.language.data  # Get selected language
+        for input_file in input_files:
+            case = {}
+            case['language_id'] = language_id  # Use dynamic language selection
+            case['source_code'] = bytes_code
+            with open(app.config['UPLOAD_FOLDER']+'/problem_data/'+input_file,'r') as f:
+                case['stdin'] = f.read()  # Changed from 'inputs' to 'stdin'
+            cases['submissions'].append(case)
+        payload = json.dumps(cases)
+        conn.request("POST", "/submissions/batch?base64_encoded=true", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        response_text = data.decode("utf-8")
+        print(response_text)
+        
+        # Handle potential JSON parsing errors
+        try:
+          response_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+          print(f"JSON decode error: {e}")
+          flash('Error communicating with Judge0 API. Please try again.', 'danger')
+          return redirect(url_for('show_prob', prob_id=prob_id))
+        
+        # Check if response is valid
+        if not isinstance(response_data, list):
+          print(f"Unexpected response format: {response_data}")
+          flash('Unexpected response from Judge0 API. Please try again.', 'danger')
+          return redirect(url_for('show_prob', prob_id=prob_id))
+        
+        tokens = []
+        for d in response_data:
+            print(d)
+            if 'token' in d:
+                tokens.append(d['token'])
+            else:
+                # Handle error in submission
+                if 'error' in d:
+                  print(f"Submission error: {d['error']}")
+                tokens.append(None)
+        
+        # Check if we got any valid tokens
+        if all(token is None for token in tokens):
+          flash('Failed to submit code to Judge0. Please check your code and try again.', 'danger')
+          return redirect(url_for('show_prob', prob_id=prob_id))
+        
+        tokens_string = json.dumps(tokens)
+        submission = Submission(user_id=session['id'],problem_id=prob_id,tokens=tokens_string,cases=result.cases,language_id=language_id)
+        db.session.add(submission)
+        db.session.commit()
+        submission_id = Submission.query.filter_by(tokens=tokens_string).first().id
+        return redirect('/submission/'+str(submission_id))
+      except http.client.HTTPException as e:
+        print(f"HTTP connection error: {e}")
+        flash('Connection error with Judge0 API. Please try again.', 'danger')
+        return redirect(url_for('show_prob', prob_id=prob_id))
+      except Exception as e:
+        print(f"Unexpected error: {e}")
+        flash('An unexpected error occurred. Please try again.', 'danger')
+        return redirect(url_for('show_prob', prob_id=prob_id))
     return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags))
 
 @app.route('/submission/<int:sub_id>')
@@ -262,23 +333,54 @@ def show_sub(sub_id):
       for i in range(len(tokens)):
           token = tokens[i]
           if token is None:
-              results.append('Compile error')
+              results.append('Compilation Error')
           else:
               if statuses[i] is None:
-                  conn = http.client.HTTPSConnection("judge0-ce.p.rapidapi.com")
-                  conn.request("GET", "/submissions/"+token+"?base64_encoded=true&fields=*", headers=headers)
-                  res = conn.getresponse()
-                  submission_data = json.loads(res.read().decode("utf-8"))
-                  print(submission_data)
-                  if(submission_data['status']['id']<3):
-                    results.append("Not finished")
-                  else:
-                    recieved_cases += 1
-                    if(submission_data['status']['id']==3):
-                      results.append('Accepted')
-                      correct_cases+=1
-                    if(submission_data['status']['id']==4):
-                      results.append('Wrong Answer')
+                  try:
+                      conn = http.client.HTTPSConnection("judge0-ce.p.rapidapi.com")
+                      conn.request("GET", "/submissions/"+token+"?base64_encoded=true&fields=*", headers=headers)
+                      res = conn.getresponse()
+                      response_text = res.read().decode("utf-8")
+                      submission_data = json.loads(response_text)
+                      print(submission_data)
+                      
+                      status_id = submission_data.get('status', {}).get('id')
+                      if status_id is None:
+                          results.append("Error")
+                      elif status_id < 3:
+                          results.append("Not finished")
+                      else:
+                          recieved_cases += 1
+                          # Use the JUDGE0_STATUS mapping
+                          status_description = JUDGE0_STATUS.get(status_id, "Unknown Status")
+                          if status_id == 3:
+                              results.append('Accepted')
+                              correct_cases += 1
+                          elif status_id == 4:
+                              results.append('Wrong Answer')
+                          elif status_id == 5:
+                              results.append('Time Limit Exceeded')
+                          elif status_id == 6:
+                              results.append('Compilation Error')
+                          elif status_id in [7, 8, 9, 10, 11, 12]:
+                              results.append('Runtime Error')
+                          elif status_id == 13:
+                              results.append('Internal Error')
+                          elif status_id == 14:
+                              results.append('Exec Format Error')
+                          else:
+                              results.append(status_description)
+                  except (http.client.HTTPException, json.JSONDecodeError, KeyError) as e:
+                      print(f"Error fetching submission {token}: {e}")
+                      results.append("Error")
+              else:
+                  # Status already determined, count it
+                  results.append(statuses[i])
+                  if statuses[i] == 'Accepted':
+                      correct_cases += 1
+                      recieved_cases += 1
+                  elif statuses[i] not in ['Not finished', 'Error']:
+                      recieved_cases += 1
       sub.correct = correct_cases
       sub.recieved = recieved_cases
       sub.status = json.dumps(results)
@@ -290,8 +392,16 @@ def show_sub(sub_id):
             cases_string += "✅"
         elif status == 'Wrong Answer':
             cases_string += "❌"
-        elif status == 'Compile Error':
+        elif status == 'Compilation Error':
             cases_string += "💥"
+        elif status == 'Time Limit Exceeded':
+            cases_string += "⏱️"
+        elif status == 'Runtime Error':
+            cases_string += "💣"
+        elif status == 'Error' or status == 'Internal Error' or status == 'Exec Format Error':
+            cases_string += "❗"
+        elif status == 'Not finished':
+            cases_string += "⚙️"
         else:
             cases_string += "⚙️"
         cases_string += "\n"

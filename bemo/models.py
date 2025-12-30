@@ -38,6 +38,7 @@ class Submission(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   user_id = db.Column(db.Integer,db.ForeignKey(User.id),nullable=False)
   problem_id = db.Column(db.Integer,db.ForeignKey(Problem.id),nullable=False)
+  language_id = db.Column(db.String(10), nullable=False, default='54')  # Track language used
   correct = db.Column(db.Integer, default=0)
   incorrect = db.Column(db.Integer,default=0)
   cases = db.Column(db.Integer, default=0)
