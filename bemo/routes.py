@@ -66,6 +66,9 @@ LANGUAGE_MODES = {
     '74': 'typescript'   # TypeScript
 }
 
+# Valid language IDs (must match the form choices)
+VALID_LANGUAGE_IDS = set(LANGUAGE_MODES.keys())
+
 #wraps functions to require auth0 token for access
 def requires_auth(f):
   @wraps(f)
@@ -246,6 +249,12 @@ def show_prob(prob_id):
         print(result.inputs)
         input_files = eval(result.inputs)
         language_id = form.language.data  # Get selected language
+        
+        # Validate language_id to prevent injection
+        if language_id not in VALID_LANGUAGE_IDS:
+            flash('Invalid language selected. Please try again.', 'danger')
+            return redirect(url_for('show_prob', prob_id=prob_id))
+        
         for input_file in input_files:
             case = {}
             case['language_id'] = language_id  # Use dynamic language selection
@@ -329,7 +338,7 @@ def show_sub(sub_id):
           statuses = [None] * problem.cases
       results = []
       correct_cases = 0
-      recieved_cases = 0
+      received_cases = 0
       for i in range(len(tokens)):
           token = tokens[i]
           if token is None:
@@ -350,7 +359,7 @@ def show_sub(sub_id):
                       elif status_id < 3:
                           results.append("Not finished")
                       else:
-                          recieved_cases += 1
+                          received_cases += 1
                           # Use the JUDGE0_STATUS mapping
                           status_description = JUDGE0_STATUS.get(status_id, "Unknown Status")
                           if status_id == 3:
@@ -378,11 +387,11 @@ def show_sub(sub_id):
                   results.append(statuses[i])
                   if statuses[i] == 'Accepted':
                       correct_cases += 1
-                      recieved_cases += 1
+                      received_cases += 1
                   elif statuses[i] not in ['Not finished', 'Error']:
-                      recieved_cases += 1
+                      received_cases += 1
       sub.correct = correct_cases
-      sub.recieved = recieved_cases
+      sub.recieved = received_cases
       sub.status = json.dumps(results)
       print(sub.status)
       db.session.commit()
