@@ -3,7 +3,8 @@ from bemo import db, app
 
 solves = db.Table('solves',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('problem_id', db.Integer, db.ForeignKey('problem.id'), primary_key=True)
+    db.Column('problem_id', db.Integer, db.ForeignKey('problem.id'), primary_key=True),
+    db.Column('solved_at', db.DateTime, nullable=False, default=datetime.utcnow)
 )
 
 class User(db.Model):
@@ -21,6 +22,13 @@ class User(db.Model):
   stripe_account_id = db.Column(db.String(120), nullable=True)
   first_solves = db.Column(db.Integer, nullable=False, default=0)
   last_milestone_paid = db.Column(db.Integer, nullable=False, default=0)
+  # Streak tracking
+  current_streak = db.Column(db.Integer, nullable=False, default=0)
+  longest_streak = db.Column(db.Integer, nullable=False, default=0)
+  last_solve_date = db.Column(db.Date, nullable=True)
+  # Monthly leaderboard tracking
+  monthly_score = db.Column(db.Integer, nullable=False, default=0)
+  last_monthly_reset = db.Column(db.Date, nullable=True)
   solved_problems = db.relationship('Problem', secondary=solves, lazy='subquery',
         backref=db.backref('solvers', lazy=True))
 
@@ -51,7 +59,24 @@ class Submission(db.Model):
   #json formatted tokens
   tokens = db.Column(db.Text, nullable=False, default='[]')
   status = db.Column(db.Text, nullable=False, default='[]')
+  submitted_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
 
 
   def __repr__(self):
     return f"User('{self.status}','{self.id}')"
+
+class MonthlyLeaderboard(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+  year = db.Column(db.Integer, nullable=False)
+  month = db.Column(db.Integer, nullable=False)
+  rank = db.Column(db.Integer, nullable=False)
+  score = db.Column(db.Integer, nullable=False)
+  reward_paid = db.Column(db.Boolean, nullable=False, default=False)
+  created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+  
+  # Composite unique constraint for user, year, month
+  __table_args__ = (db.UniqueConstraint('user_id', 'year', 'month', name='_user_month_uc'),)
+  
+  def __repr__(self):
+    return f"MonthlyLeaderboard(user_id={self.user_id}, rank={self.rank}, {self.year}-{self.month})"
