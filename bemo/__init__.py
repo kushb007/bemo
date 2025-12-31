@@ -22,7 +22,22 @@ app.config['SECRET_KEY'] = env.get("APP_SECRET_KEY")
 
 # Use absolute path for database to ensure consistency across scripts
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
+
+# Check for DATABASE_URL environment variable (for CockroachDB/Postgres)
+# If not found, fall back to local SQLite
+uri = env.get('DATABASE_URL')
+if uri and uri.startswith('postgresql://'):
+    # SQLAlchemy requires 'cockroachdb://' to use the correct dialect
+    uri = uri.replace('postgresql://', 'cockroachdb://')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = uri or 'sqlite:///' + os.path.join(basedir, 'site.db')
+
+# Handle CockroachDB specific configuration if needed
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('cockroachdb'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
 
 app.config['UPLOAD_FOLDER'] = os.getcwd()+'/bemo/static/'
 print("UPLOAD_FOLDER",app.config['UPLOAD_FOLDER'])
