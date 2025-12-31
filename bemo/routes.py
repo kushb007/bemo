@@ -390,6 +390,12 @@ def payout_settings():
 
     return render_template('payout_settings.html', form=form, user=user)
 
+@app.route('/settings')
+@requires_auth
+def settings():
+    user = User.query.filter_by(id=session['id']).first()
+    return render_template('settings.html', user=user, title='Settings')
+
 @app.route('/stripe-return')
 @requires_auth
 def stripe_return():

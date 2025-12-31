@@ -22,7 +22,7 @@
 	{%if user%}
 	<div class="card shadow-sm">
 		<div class="card-header bg-success text-white">
-			<h4 class="mb-0">💻 Submit Your Solution</h4>
+			<h4 class="mb-0"><i class="bi bi-code-slash"></i> Submit Solution</h4>
 		</div>
 		<div class="card-body">
 			<form method="POST" action="" class="form-problem" enctype="multipart/form-data">
@@ -78,11 +78,18 @@
 		'74': 'typescript'   // TypeScript
 	};
 	
+	// Get the current theme from localStorage
+	var currentTheme = window.BemoTheme ? window.BemoTheme.getTheme() : 'light';
+	var editorTheme = currentTheme === 'dark' ? 'ace/theme/monokai' : 'ace/theme/github';
+	
 	var editor = ace.edit("editor");
-	editor.setTheme("ace/theme/monokai");
+	editor.setTheme(editorTheme);
 	editor.session.setMode("ace/mode/c_cpp");  // Default mode
 	editor.setFontSize(14);
 	editor.setShowPrintMargin(false);
+	
+	// Store editor globally so theme.js can update it
+	window.editor = editor;
 	
 	var textarea = document.getElementById('code_input');
 	editor.getSession().setValue(textarea.value);
