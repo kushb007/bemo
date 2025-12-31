@@ -76,7 +76,7 @@ def requires_auth(f):
   def decorated(*args, **kwargs):
     if 'id' not in session:
       # Redirect to Login page here
-      pass
+      return redirect(url_for('login'))
     return f(*args, **kwargs)
   return decorated
 
