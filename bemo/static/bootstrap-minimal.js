@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
             const menu = this.nextElementSibling;
+            // Validate that we found a dropdown menu element
             if (menu && menu.classList.contains('dropdown-menu')) {
                 // Close other dropdowns
                 document.querySelectorAll('.dropdown-menu.show').forEach(function(m) {
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const alert = this.closest('.alert');
             if (alert) {
-                alert.style.display = 'none';
+                alert.classList.add('hidden');
             }
         });
     });
