@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">
+                <i class="bi bi-gear-fill"></i> Settings
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5 class="mb-3">Appearance</h5>
+                    
+                    <!-- Theme Setting -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-palette-fill text-primary me-2"></i>
+                                        Theme
+                                    </h6>
+                                    <small class="text-muted">Choose between light and dark mode</small>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="theme-switch" style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                                    <label class="form-check-label ms-2" for="theme-switch" id="theme-label">Light</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layout Density Setting -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-layout-three-columns text-success me-2"></i>
+                                        Layout Density
+                                    </h6>
+                                    <small class="text-muted">Adjust spacing and padding</small>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="layout-switch" style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                                    <label class="form-check-label ms-2" for="layout-switch" id="layout-label">Comfortable</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Section -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Note:</strong> Your preferences are saved automatically and will persist across sessions.
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="col-md-4">
+                    <h5 class="mb-3">Preview</h5>
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Sample Card</h6>
+                            <p class="card-text text-muted">This is how cards will appear with your current settings.</p>
+                            <a href="#" class="btn btn-primary btn-sm">Sample Button</a>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <span class="badge bg-success">Easy</span>
+                            <span class="badge bg-warning text-dark">Medium</span>
+                            <span class="badge bg-danger">Hard</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeLabel = document.getElementById('theme-label');
+    const layoutSwitch = document.getElementById('layout-switch');
+    const layoutLabel = document.getElementById('layout-label');
+
+    // Initialize switches based on current settings
+    const currentTheme = window.BemoTheme.getTheme();
+    const currentLayout = window.BemoTheme.getLayout();
+
+    themeSwitch.checked = currentTheme === 'dark';
+    themeLabel.textContent = currentTheme === 'dark' ? 'Dark' : 'Light';
+
+    layoutSwitch.checked = currentLayout === 'compact';
+    layoutLabel.textContent = currentLayout === 'compact' ? 'Compact' : 'Comfortable';
+
+    // Theme switch handler
+    themeSwitch.addEventListener('change', function() {
+        const newTheme = this.checked ? 'dark' : 'light';
+        window.BemoTheme.setTheme(newTheme);
+        themeLabel.textContent = newTheme === 'dark' ? 'Dark' : 'Light';
+    });
+
+    // Layout switch handler
+    layoutSwitch.addEventListener('change', function() {
+        const newLayout = this.checked ? 'compact' : 'comfortable';
+        window.BemoTheme.setLayout(newLayout);
+        layoutLabel.textContent = newLayout === 'compact' ? 'Compact' : 'Comfortable';
+    });
+});
+</script>
+{% endblock content %}
