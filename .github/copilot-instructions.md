@@ -1,26 +1,26 @@
 # Bemo - Copilot Instructions
 
 ## Project Overview
-Bemo is a competitive programming platform for rural Indian high schools. Users can solve coding problems, submit solutions for automated judging, and track their progress. The platform uses Auth0 for authentication and Judge0 API for code execution.
+Bemo is a competitive programming platform for rural Indian high schools. Users can solve coding problems, submit solutions for automated judging, and track their progress. The platform uses Auth0 for authentication and Judge0 API for code execution (supporting 11 languages).
 
 ## Architecture
 
 ### Core Components
 - **Flask Application** ([bemo/__init__.py](bemo/__init__.py)): Initializes app with SQLAlchemy, OAuth (Auth0), and Flask-Caching
-- **Routes** ([bemo/routes.py](bemo/routes.py)): 373 lines handling authentication, problem display, submission, and user management
+- **Routes** ([bemo/routes.py](bemo/routes.py)): Handles authentication, problem display, submission, user management, and Stripe payouts
 - **Models** ([bemo/models.py](bemo/models.py)): Three SQLAlchemy models - `User`, `Problem`, `Submission`
-- **Forms** ([bemo/forms.py](bemo/forms.py)): WTForms for user registration (`Confirm`), profile pictures (`Picture`), and code submission (`Code`)
+- **Forms** ([bemo/forms.py](bemo/forms.py)): WTForms for user registration (`Confirm`), profile pictures (`Picture`), code submission (`Code`), and payout settings (`PayoutSettings`)
 
 ### Database Structure
 - **SQLite** (`site.db`) with three tables:
-  - `User`: Auth0 integration (`sub` field), scoring (`score`, `contribution`), profile management
-  - `Problem`: Stores problem metadata and references to test case files (inputs/outputs stored as JSON arrays of file paths in `problem_data/`)
-  - `Submission`: Tracks Judge0 execution tokens, check count with exponential backoff, and per-case results
+  - `User`: Auth0 integration (`sub` field), scoring (`score`, `contribution`), profile management, Stripe Connect (`stripe_account_id`, `first_solves`, `last_milestone_paid`)
+  - `Problem`: Stores problem metadata, references to test case files, and `first_solver_id`
+  - `Submission`: Tracks Judge0 execution tokens, check count with exponential backoff, per-case results, and `language_id`
 
 ### External Dependencies
 - **Auth0**: OAuth authentication - requires `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_DOMAIN` in `.env`
-- **Judge0 API**: Code execution via RapidAPI - hardcoded API key in [routes.py:31-34](bemo/routes.py#L31-L34)
-- **Square**: Payment integration - requires `SQUARE_ACCESS_TOKEN` in `.env`
+- **Judge0 API**: Code execution via RapidAPI - hardcoded API key in [routes.py](bemo/routes.py)
+- **Stripe**: Payment integration for rewards - requires `STRIPE_API_KEY` and `STRIPE_CLIENT_ID` in `.env`
 
 ## Critical Workflows
 
@@ -34,7 +34,8 @@ python run.py  # Starts on 0.0.0.0:8080
 ```
 
 ### Database Initialization
-Database auto-creates on first run via `app.app_context().push()` in [__init__.py](bemo/__init__.py). No migration system - schema changes require manual DB updates.
+Database auto-creates on first run via `app.app_context().push()` in [__init__.py](bemo/__init__.py).
+- **Migrations**: Use provided migration scripts (e.g., `migrate_add_language.py`, `migrate_stripe_integration.py`) for schema updates.
 
 ### Adding Problems
 Use Gradio interface in [addProblem.py](addProblem.py):
@@ -45,11 +46,16 @@ python addProblem.py  # Launches Gradio UI
 - File paths stored as JSON arrays in `Problem.inputs` and `Problem.outputs`
 
 ### Code Submission Flow
-1. User submits code via ACE editor or file upload ([problem.html](bemo/templates/problem.html))
-2. Code base64-encoded and batch-submitted to Judge0 ([routes.py:207-230](bemo/routes.py#L207-L230))
+1. User selects language and submits code via ACE editor or file upload ([problem.html](bemo/templates/problem.html))
+2. Code base64-encoded and batch-submitted to Judge0 with selected `language_id` ([routes.py](bemo/routes.py))
 3. Submission tokens stored in `Submission.tokens` as JSON array
-4. Results checked with exponential backoff: `min(60^checks, 10000)` seconds ([routes.py:254](bemo/routes.py#L254))
+4. Results checked with exponential backoff: `min(60^checks, 10000)` seconds
 5. Status displayed with emoji indicators (✅ ❌ 💥 ⚙️) in [submission.html](bemo/templates/submission.html)
+
+### Stripe Integration
+- Users connect Stripe Express accounts via `/payout-settings`
+- Rewards paid automatically when users reach first-solve milestones (1st, 5th, 10th)
+- `check_milestones_and_pay(user)` handles transfers
 
 ## Project-Specific Patterns
 
@@ -65,15 +71,17 @@ python addProblem.py  # Launches Gradio UI
 ### JSON-in-Database Pattern
 All array/list data stored as JSON strings: `Problem.tags`, `Problem.inputs`, `Problem.outputs`, `Submission.tokens`, `Submission.status`. Always use `json.loads()` and `json.dumps()` when reading/writing.
 
-### Language ID Hardcoding
-Judge0 submissions hardcoded to C++ (`language_id='52'`) in [routes.py:214](bemo/routes.py#L214). TODO comment indicates this should be dynamic.
+### Stripe Payouts
+- Milestone-based rewards for "first solves"
+- Uses Stripe Connect Transfers API
+- Requires valid Stripe account connected to User profile
 
 ## Known Issues & TODOs
 
-- [ ] Language selection hardcoded to C++ (line 214 in routes.py)
-- [ ] User-problem solve relationship should be many-to-many, currently single (line 302)
-- [ ] Payment/reward system for first solvers incomplete (line 313)
-- [ ] No database migration system - CockroachDB planned per README
+- [x] Language selection hardcoded to C++ (Completed: Support for 11 languages added)
+- [ ] User-problem solve relationship should be many-to-many, currently single
+- [x] Payment/reward system for first solvers incomplete (Completed: Stripe integration added)
+- [ ] No database migration system - CockroachDB planned per README (Partial: Migration scripts added)
 - [ ] Judge0 API key hardcoded in routes.py - should move to environment variables
 - [ ] Exponential backoff can lead to very long wait times (up to 10000 seconds)
 
@@ -97,7 +105,8 @@ APP_SECRET_KEY=<flask-secret>
 AUTH0_CLIENT_ID=<auth0-client-id>
 AUTH0_CLIENT_SECRET=<auth0-client-secret>
 AUTH0_DOMAIN=<auth0-domain>
-SQUARE_ACCESS_TOKEN=<square-token>
+STRIPE_API_KEY=<stripe-secret-key>
+STRIPE_CLIENT_ID=<stripe-client-id>
 ```
 
 ### Test Data
