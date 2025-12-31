@@ -583,9 +583,10 @@ def show_sub(sub_id):
             complexity_awarded = False
             if complexity_open:
                 # This is the first solve at this complexity level
-                complexity_bonus = calculate_complexity_bonus(problem.rating, detected_complexity)
-                # Record the complexity solve
+                # Record the complexity solve FIRST to handle race conditions
                 if record_complexity_solve(problem.id, user.id, sub.id, detected_complexity):
+                    # Success - calculate and award bonus
+                    complexity_bonus = calculate_complexity_bonus(problem.rating, detected_complexity)
                     complexity_awarded = True
                     print(f"🎉 First solve at {detected_complexity} complexity! Bonus: {complexity_bonus} points")
                 else:

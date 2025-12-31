@@ -301,7 +301,7 @@ def calculate_complexity_bonus(problem_rating: int, complexity: str) -> int:
         return base_bonus
     
     # Award more points for better complexities
-    # O(1) gets 5x, O(log n) gets 4x, O(n) gets 3x, etc.
+    # O(1) gets 8x, O(log n) gets 7x, O(n) gets 6x, O(n log n) gets 5x, etc.
     multiplier = max(1, len(COMPLEXITY_HIERARCHY) - comp_rank)
     
     return base_bonus * multiplier
