@@ -44,6 +44,8 @@ class Problem(db.Model):
   inputs = db.Column(db.Text,nullable=False, default='[]')
   outputs = db.Column(db.Text, nullable=False, default='[]')
   solved = db.Column(db.Integer, nullable=False, default=0)
+  # Expected optimal time complexity (e.g., 'O(n)', 'O(n^2)', 'O(log n)')
+  optimal_complexity = db.Column(db.String(20), nullable=True)
 
 class Submission(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -60,6 +62,10 @@ class Submission(db.Model):
   tokens = db.Column(db.Text, nullable=False, default='[]')
   status = db.Column(db.Text, nullable=False, default='[]')
   submitted_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+  # Store execution times from Judge0 (JSON array of times per test case in seconds)
+  execution_times = db.Column(db.Text, nullable=True, default='[]')
+  # Detected time complexity for this submission
+  detected_complexity = db.Column(db.String(20), nullable=True)
 
 
   def __repr__(self):
@@ -80,3 +86,18 @@ class MonthlyLeaderboard(db.Model):
   
   def __repr__(self):
     return f"MonthlyLeaderboard(user_id={self.user_id}, rank={self.rank}, {self.year}-{self.month})"
+
+class ProblemComplexitySolve(db.Model):
+  """Tracks the first solver for each time complexity level of a problem."""
+  id = db.Column(db.Integer, primary_key=True)
+  problem_id = db.Column(db.Integer, db.ForeignKey(Problem.id), nullable=False)
+  complexity = db.Column(db.String(20), nullable=False)  # e.g., 'O(n)', 'O(n^2)'
+  first_solver_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+  solved_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+  submission_id = db.Column(db.Integer, db.ForeignKey(Submission.id), nullable=False)
+  
+  # Unique constraint: only one first solver per problem per complexity
+  __table_args__ = (db.UniqueConstraint('problem_id', 'complexity', name='_problem_complexity_uc'),)
+  
+  def __repr__(self):
+    return f"ProblemComplexitySolve(problem={self.problem_id}, complexity={self.complexity}, solver={self.first_solver_id})"
