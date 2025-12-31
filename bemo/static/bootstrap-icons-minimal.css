@@ -1,0 +1,18 @@
+/* Minimal Bootstrap Icons replacement using Unicode/Emoji */
+.bi::before {
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+}
+
+.bi-trophy-fill::before { content: "🏆"; }
+.bi-star-fill::before { content: "⭐"; }
+.bi-code-square::before { content: "💻"; }
+.bi-person-circle::before { content: "👤"; }
+.bi-credit-card::before { content: "💳"; }
+.bi-gear-fill::before { content: "⚙️"; }
+.bi-moon-fill::before { content: "🌙"; }
+.bi-box-arrow-right::before { content: "➡️"; }
+.bi-box-arrow-in-right::before { content: "🔑"; }
