@@ -263,7 +263,7 @@ def record_complexity_solve(problem_id: int, user_id: int, submission_id: int, c
     if not is_complexity_open_for_scoring(problem_id, complexity):
         return False
     
-    # Record the solve
+    # Record the solve - let caller handle commit
     try:
         solve = ProblemComplexitySolve(
             problem_id=problem_id,
@@ -272,7 +272,8 @@ def record_complexity_solve(problem_id: int, user_id: int, submission_id: int, c
             submission_id=submission_id
         )
         db.session.add(solve)
-        db.session.commit()
+        # Don't commit here - let the calling function handle transaction
+        # The unique constraint will still prevent duplicates when commit happens
         return True
     except Exception as e:
         # Likely a race condition - someone else solved it first
