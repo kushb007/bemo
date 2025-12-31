@@ -6,7 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (navbarToggler && navbarCollapse) {
         navbarToggler.addEventListener('click', function() {
+            const isExpanded = navbarCollapse.classList.contains('show');
             navbarCollapse.classList.toggle('show');
+            // Update ARIA attribute for accessibility
+            this.setAttribute('aria-expanded', !isExpanded);
         });
     }
     
