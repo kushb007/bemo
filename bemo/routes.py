@@ -352,7 +352,7 @@ def show_prob(prob_id):
         print(f"Unexpected error: {e}")
         flash('An unexpected error occurred. Please try again.', 'danger')
         return redirect(url_for('show_prob', prob_id=prob_id))
-    return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags))
+    return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags),complexity_status=get_problem_complexity_status(result.id))
 
 def check_milestones_and_pay(user):
     milestones = {
@@ -580,14 +580,21 @@ def show_sub(sub_id):
             
             # Calculate scores
             complexity_bonus = 0
+            complexity_awarded = False
             if complexity_open:
                 # This is the first solve at this complexity level
                 complexity_bonus = calculate_complexity_bonus(problem.rating, detected_complexity)
                 # Record the complexity solve
-                record_complexity_solve(problem.id, user.id, sub.id, detected_complexity)
-                print(f"🎉 First solve at {detected_complexity} complexity! Bonus: {complexity_bonus} points")
+                if record_complexity_solve(problem.id, user.id, sub.id, detected_complexity):
+                    complexity_awarded = True
+                    print(f"🎉 First solve at {detected_complexity} complexity! Bonus: {complexity_bonus} points")
+                else:
+                    print(f"⚠️ Race condition - someone else solved {detected_complexity} first")
             else:
                 print(f"⚠️ Complexity {detected_complexity} already solved for this problem - no complexity bonus")
+            
+            # Store whether complexity was awarded in session for display
+            session['complexity_awarded'] = complexity_awarded
             
             # Calculate base problem score (no longer using is_first_solve)
             problem_score = calculate_problem_score(problem, complexity_bonus=complexity_bonus)
@@ -613,7 +620,7 @@ def show_sub(sub_id):
             
             print(f"Accepted: +{problem_score} problem points (base + complexity bonus), +{streak_bonus} streak bonus = {total_points} total points")
         
-    return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status)
+    return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status,complexity_awarded=session.get('complexity_awarded', False))
 
 
 #updates user's columns

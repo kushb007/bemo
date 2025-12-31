@@ -9,6 +9,22 @@
 			<h4 class="mb-3">Problem: <strong>{{problem.title}}</strong></h4>
 			<h5 class="text-muted mb-4">Submitted by: {{user.username}}</h5>
 			
+			{%if submission.detected_complexity%}
+			<div class="alert alert-secondary" role="alert">
+				<h5 class="alert-heading"><i class="bi bi-speedometer2"></i> Detected Time Complexity</h5>
+				<p class="mb-0">
+					Your solution appears to run in <strong>{{submission.detected_complexity}}</strong> time.
+					{%if submission.correct == submission.cases%}
+					{%if complexity_awarded%}
+					<span class="badge bg-success ms-2">✨ First solve at this complexity! Bonus awarded!</span>
+					{%else%}
+					<span class="badge bg-warning text-dark ms-2">⚠️ This complexity level already solved</span>
+					{%endif%}
+					{%endif%}
+				</p>
+			</div>
+			{%endif%}
+			
 			<div class="alert alert-info" role="alert">
 				<h5 class="alert-heading">{{msg1}}</h5>
 				<hr>

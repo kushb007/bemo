@@ -19,6 +19,35 @@
 		</div>
 	</div>
 
+	<!-- Time Complexity Status Card -->
+	<div class="card shadow-sm mb-4">
+		<div class="card-header bg-info text-white">
+			<h5 class="mb-0"><i class="bi bi-speedometer2"></i> Time Complexity Status</h5>
+		</div>
+		<div class="card-body">
+			<p class="mb-3">
+				<strong>Scoring Rule:</strong> Only the <span class="badge bg-warning text-dark">first solver</span> at each complexity level gets bonus points. 
+				Easier complexities close when a complexity is solved. 
+				<a href="/TIME_COMPLEXITY_SYSTEM.md" target="_blank" class="text-decoration-none">Learn more</a>
+			</p>
+			<div class="row">
+				{%for complexity in ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 'O(n^2)', 'O(n^3)', 'O(2^n)', 'O(n!)']%}
+				<div class="col-md-3 col-sm-4 col-6 mb-2">
+					{%if complexity_status[complexity]['open']%}
+					<span class="badge bg-success w-100 p-2">
+						{{complexity}} - <strong>OPEN</strong> ✅
+					</span>
+					{%else%}
+					<span class="badge bg-secondary w-100 p-2" title="First solved by {{complexity_status[complexity]['solver']}}">
+						{{complexity}} - CLOSED 🔒
+					</span>
+					{%endif%}
+				</div>
+				{%endfor%}
+			</div>
+		</div>
+	</div>
+
 	{%if user%}
 	<div class="card shadow-sm">
 		<div class="card-header bg-success text-white">
