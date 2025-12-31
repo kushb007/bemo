@@ -94,13 +94,14 @@ def calculate_streak_bonus(streak_days):
     return total_bonus
 
 
-def calculate_problem_score(problem, is_first_solve=False):
+def calculate_problem_score(problem, is_first_solve=False, complexity_bonus=0):
     """
     Calculate score for solving a problem.
     
     Args:
         problem: Problem object
-        is_first_solve: Boolean indicating if this is the first solve globally
+        is_first_solve: Boolean indicating if this is the first solve globally (deprecated, kept for compatibility)
+        complexity_bonus: Bonus points for time complexity achievement
     
     Returns:
         int: Points awarded for solving this problem
@@ -112,9 +113,8 @@ def calculate_problem_score(problem, is_first_solve=False):
         difficulty_multiplier = problem.rating / 1000.0
         base_score = int(base_score * difficulty_multiplier)
     
-    # Bonus for being first to solve
-    if is_first_solve:
-        base_score = int(base_score * 2)  # Double points for first solve
+    # Add complexity bonus (replaces first solve bonus)
+    base_score += complexity_bonus
     
     return base_score
 

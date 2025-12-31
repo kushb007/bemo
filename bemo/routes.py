@@ -11,7 +11,15 @@ from functools import wraps
 from urllib.parse import quote_plus, urlencode
 from bemo import app, db, session, oauth, cache
 from bemo.forms import Confirm, Picture, Code, PayoutSettings
-from bemo.models import User, Problem, Submission, MonthlyLeaderboard
+from bemo.models import User, Problem, Submission, MonthlyLeaderboard, ProblemComplexitySolve
+from bemo.complexity import (
+    detect_complexity_from_execution,
+    estimate_complexity_from_time,
+    is_complexity_open_for_scoring,
+    record_complexity_solve,
+    calculate_complexity_bonus,
+    get_problem_complexity_status
+)
 from bemo.scoring import (
     update_user_streak, 
     calculate_problem_score, 
@@ -344,7 +352,7 @@ def show_prob(prob_id):
         print(f"Unexpected error: {e}")
         flash('An unexpected error occurred. Please try again.', 'danger')
         return redirect(url_for('show_prob', prob_id=prob_id))
-    return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags))
+    return render_template('problem.html',problem=result,form=form,user=user,tags=eval(result.tags),complexity_status=get_problem_complexity_status(result.id))
 
 def check_milestones_and_pay(user):
     milestones = {
@@ -456,10 +464,12 @@ def show_sub(sub_id):
       results = []
       correct_cases = 0
       received_cases = 0
+      execution_times = []  # Track execution times
       for i in range(len(tokens)):
           token = tokens[i]
           if token is None:
               results.append('Compilation Error')
+              execution_times.append(0.0)
           else:
               if statuses[i] is None:
                   try:
@@ -471,6 +481,13 @@ def show_sub(sub_id):
                       print(submission_data)
                       
                       status_id = submission_data.get('status', {}).get('id')
+                      # Capture execution time
+                      exec_time = submission_data.get('time')  # Time in seconds from Judge0
+                      if exec_time:
+                          execution_times.append(float(exec_time))
+                      else:
+                          execution_times.append(0.0)
+                      
                       if status_id is None:
                           results.append("Error")
                       elif status_id < 3:
@@ -499,9 +516,11 @@ def show_sub(sub_id):
                   except (http.client.HTTPException, json.JSONDecodeError, KeyError) as e:
                       print(f"Error fetching submission {token}: {e}")
                       results.append("Error")
+                      execution_times.append(0.0)
               else:
                   # Status already determined, count it
                   results.append(statuses[i])
+                  execution_times.append(0.0)  # No new timing data
                   if statuses[i] == 'Accepted':
                       correct_cases += 1
                       received_cases += 1
@@ -510,6 +529,8 @@ def show_sub(sub_id):
       sub.correct = correct_cases
       sub.recieved = received_cases
       sub.status = json.dumps(results)
+      # Store execution times
+      sub.execution_times = json.dumps(execution_times)
       print(sub.status)
       db.session.commit()
     cases_string = ""
@@ -536,15 +557,48 @@ def show_sub(sub_id):
       user = User.query.filter_by(id=session['id']).first()
     if sub.correct == sub.cases and user.id==sub.user_id:
         if problem not in user.solved_problems:
+            # Detect time complexity from execution times
+            execution_times = json.loads(sub.execution_times) if sub.execution_times else []
+            
+            # Estimate complexity (simplified - in production, need input sizes too)
+            if execution_times and any(t > 0 for t in execution_times):
+                avg_time = sum(execution_times) / len(execution_times)
+                detected_complexity = estimate_complexity_from_time(avg_time, problem.rating)
+            else:
+                # Default to O(n) if no timing data
+                detected_complexity = 'O(n)'
+            
+            # Store detected complexity in submission
+            sub.detected_complexity = detected_complexity
+            
+            # Check if this complexity is open for scoring
+            complexity_open = is_complexity_open_for_scoring(problem.id, detected_complexity)
+            
             # Record solve with timestamp
             user.solved_problems.append(problem)
             problem.solved += 1
             
-            # Determine if this is the first solve globally
-            is_first_solve = (problem.solved == 1)
+            # Calculate scores
+            complexity_bonus = 0
+            complexity_awarded = False
+            if complexity_open:
+                # This is the first solve at this complexity level
+                # Record the complexity solve FIRST to handle race conditions
+                if record_complexity_solve(problem.id, user.id, sub.id, detected_complexity):
+                    # Success - calculate and award bonus
+                    complexity_bonus = calculate_complexity_bonus(problem.rating, detected_complexity)
+                    complexity_awarded = True
+                    print(f"🎉 First solve at {detected_complexity} complexity! Bonus: {complexity_bonus} points")
+                else:
+                    print(f"⚠️ Race condition - someone else solved {detected_complexity} first")
+            else:
+                print(f"⚠️ Complexity {detected_complexity} already solved for this problem - no complexity bonus")
             
-            # Calculate base problem score
-            problem_score = calculate_problem_score(problem, is_first_solve)
+            # Store whether complexity was awarded in session for display
+            session['complexity_awarded'] = complexity_awarded
+            
+            # Calculate base problem score (no longer using is_first_solve)
+            problem_score = calculate_problem_score(problem, complexity_bonus=complexity_bonus)
             
             # Update streak and get streak bonus
             streak_bonus = update_user_streak(user)
@@ -558,17 +612,16 @@ def show_sub(sub_id):
             # Update monthly score
             update_monthly_score(user, total_points)
             
-            # Track first solves (for existing milestone rewards)
-            if is_first_solve:
+            # Track first solves globally (for existing milestone rewards)
+            # Note: This is different from complexity-based first solves
+            if problem.solved == 1:
                 user.first_solves += 1
-                db.session.commit()
-                check_milestones_and_pay(user)
-            else:
-                db.session.commit()
-                
-            print(f"Accepted: +{problem_score} problem points, +{streak_bonus} streak bonus = {total_points} total points")
+            
+            db.session.commit()
+            
+            print(f"Accepted: +{problem_score} problem points (base + complexity bonus), +{streak_bonus} streak bonus = {total_points} total points")
         
-    return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status)
+    return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status,complexity_awarded=session.get('complexity_awarded', False))
 
 
 #updates user's columns
