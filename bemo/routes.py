@@ -11,7 +11,15 @@ from functools import wraps
 from urllib.parse import quote_plus, urlencode
 from bemo import app, db, session, oauth, cache
 from bemo.forms import Confirm, Picture, Code, PayoutSettings
-from bemo.models import User, Problem, Submission
+from bemo.models import User, Problem, Submission, MonthlyLeaderboard
+from bemo.scoring import (
+    update_user_streak, 
+    calculate_problem_score, 
+    update_monthly_score,
+    get_current_monthly_leaderboard,
+    get_historical_monthly_leaderboard,
+    archive_monthly_leaderboard
+)
 import random
 import http.client
 import base64
@@ -101,10 +109,11 @@ def home():
     print(user)
   page = request.args.get('page', 1, type=int)
   problems = Problem.query.order_by(Problem.date_posted.desc()).paginate(page=page, per_page=5)
-  topsolvers = User.query.order_by(User.score).limit(5).all()
-  topcontributors = User.query.order_by(User.contribution).limit(5).all()
+  topsolvers = User.query.order_by(User.score.desc()).limit(5).all()
+  topcontributors = User.query.order_by(User.contribution.desc()).limit(5).all()
+  monthly_leaders = get_current_monthly_leaderboard(limit=5)
   randommessage = random.choice(["Welcome to Bemo!","Solve problems and earn points!","Join the community!","Compete with others!","Improve your coding skills!","Get started now!"])
-  return render_template('home.html', problems=problems, user=user, page=page, solvs=topsolvers,conts=topcontributors, randommessage=randommessage)
+  return render_template('home.html', problems=problems, user=user, page=page, solvs=topsolvers,conts=topcontributors, monthly_leaders=monthly_leaders, randommessage=randommessage)
 
 #list out problems in table format
 @app.route("/problems")
@@ -115,8 +124,8 @@ def problems():
     user = User.query.filter_by(id=session['id']).first()
   page = request.args.get('page', 1, type=int)
   problems = Problem.query.order_by(Problem.date_posted.desc()).paginate(page=page, per_page=5)
-  topcontributors = User.query.order_by(User.contribution).limit(5).all()
-  topsolvers = User.query.order_by(User.score).limit(5).all()
+  topcontributors = User.query.order_by(User.contribution.desc()).limit(5).all()
+  topsolvers = User.query.order_by(User.score.desc()).limit(5).all()
   return render_template('problems.html', problems=problems, user=user, page=page, conts=topcontributors, solvs=topsolvers)
 
 
@@ -200,6 +209,27 @@ def dashboard():
   solved_titles = [p.title for p in user.solved_problems]
   solved_str = json.dumps(solved_titles)
   return render_template('dashboard.html', user=user,solved=solved_str)
+
+@app.route('/leaderboard')
+def leaderboard():
+  user = None
+  if 'id' in session:
+    user = User.query.filter_by(id=session['id']).first()
+  
+  # Get all-time leaderboard
+  alltime_leaders = User.query.order_by(User.score.desc()).limit(20).all()
+  
+  # Get monthly leaderboard
+  monthly_leaders = get_current_monthly_leaderboard(limit=20)
+  
+  # Get streak leaders
+  streak_leaders = User.query.order_by(User.longest_streak.desc()).limit(20).all()
+  
+  return render_template('leaderboard.html', 
+                         user=user, 
+                         alltime_leaders=alltime_leaders,
+                         monthly_leaders=monthly_leaders,
+                         streak_leaders=streak_leaders)
 
 @app.route('/payment')
 @requires_auth
@@ -506,17 +536,37 @@ def show_sub(sub_id):
       user = User.query.filter_by(id=session['id']).first()
     if sub.correct == sub.cases and user.id==sub.user_id:
         if problem not in user.solved_problems:
+            # Record solve with timestamp
             user.solved_problems.append(problem)
             problem.solved += 1
             
-            if problem.solved == 1:
+            # Determine if this is the first solve globally
+            is_first_solve = (problem.solved == 1)
+            
+            # Calculate base problem score
+            problem_score = calculate_problem_score(problem, is_first_solve)
+            
+            # Update streak and get streak bonus
+            streak_bonus = update_user_streak(user)
+            
+            # Total points for this solve
+            total_points = problem_score + streak_bonus
+            
+            # Update overall score
+            user.score += total_points
+            
+            # Update monthly score
+            update_monthly_score(user, total_points)
+            
+            # Track first solves (for existing milestone rewards)
+            if is_first_solve:
                 user.first_solves += 1
                 db.session.commit()
                 check_milestones_and_pay(user)
             else:
                 db.session.commit()
                 
-            print("Accepted")
+            print(f"Accepted: +{problem_score} problem points, +{streak_bonus} streak bonus = {total_points} total points")
         
     return render_template('submission.html',submission=sub,problem=problem,user=user,msg1=cases_string,msg2=sub.status)
 

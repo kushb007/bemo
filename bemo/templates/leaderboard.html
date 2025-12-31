@@ -1,0 +1,189 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="bi bi-trophy-fill"></i> Leaderboards</h1>
+    
+    <ul class="nav nav-tabs mb-4" id="leaderboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="monthly-tab" data-bs-toggle="tab" data-bs-target="#monthly" type="button" role="tab" aria-controls="monthly" aria-selected="true">
+                📅 Monthly
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="alltime-tab" data-bs-toggle="tab" data-bs-target="#alltime" type="button" role="tab" aria-controls="alltime" aria-selected="false">
+                🏆 All-Time
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="streak-tab" data-bs-toggle="tab" data-bs-target="#streak" type="button" role="tab" aria-controls="streak" aria-selected="false">
+                🔥 Streaks
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="leaderboardTabContent">
+        <!-- Monthly Leaderboard -->
+        <div class="tab-pane fade show active" id="monthly" role="tabpanel" aria-labelledby="monthly-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0">Monthly Leaderboard - Current Month</h4>
+                    <p class="mb-0 small">Top 3 receive rewards! 🥇 $50 | 🥈 $25 | 🥉 $10</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Monthly Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {%for rank, leader, score in monthly_leaders%}
+                                <tr {% if user and leader.id == user.id %}class="table-primary"{% endif %}>
+                                    <td>
+                                        <strong>#{{rank}}</strong>
+                                        {% if rank == 1 %}🥇
+                                        {% elif rank == 2 %}🥈
+                                        {% elif rank == 3 %}🥉
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{url_for('show_user',username=leader.username)}}" class="text-decoration-none">
+                                            {{leader.username}}
+                                        </a>
+                                    </td>
+                                    <td><span class="badge bg-warning">{{score}} pts</span></td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- All-Time Leaderboard -->
+        <div class="tab-pane fade" id="alltime" role="tabpanel" aria-labelledby="alltime-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">All-Time Leaderboard</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Total Score</th>
+                                    <th>Problems Solved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {%for leader in alltime_leaders%}
+                                <tr {% if user and leader.id == user.id %}class="table-primary"{% endif %}>
+                                    <td><strong>#{{loop.index}}</strong></td>
+                                    <td>
+                                        <a href="{{url_for('show_user',username=leader.username)}}" class="text-decoration-none">
+                                            {{leader.username}}
+                                        </a>
+                                    </td>
+                                    <td><span class="badge bg-success">{{leader.score}} pts</span></td>
+                                    <td>{{leader.solved_problems|length}}</td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Streak Leaderboard -->
+        <div class="tab-pane fade" id="streak" role="tabpanel" aria-labelledby="streak-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">🔥 Streak Leaderboard</h4>
+                    <p class="mb-0 small">Most consistent problem solvers!</p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Current Streak</th>
+                                    <th>Longest Streak</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {%for leader in streak_leaders%}
+                                <tr {% if user and leader.id == user.id %}class="table-primary"{% endif %}>
+                                    <td><strong>#{{loop.index}}</strong></td>
+                                    <td>
+                                        <a href="{{url_for('show_user',username=leader.username)}}" class="text-decoration-none">
+                                            {{leader.username}}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning">
+                                            {{leader.current_streak}} days 
+                                            {% if leader.current_streak >= 7 %}🔥{% endif %}
+                                            {% if leader.current_streak >= 30 %}💪{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            {{leader.longest_streak}} days
+                                        </span>
+                                    </td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">ℹ️ Scoring System</h5>
+        </div>
+        <div class="card-body">
+            <h6>How Points are Calculated:</h6>
+            <ul>
+                <li><strong>Problem Solving:</strong> Base 100 points × difficulty rating</li>
+                <li><strong>First Solve Bonus:</strong> 2x points for being the first to solve a problem</li>
+                <li><strong>Streak Bonus:</strong> 10 points per day of consecutive solving (increases with longer streaks)</li>
+                <li><strong>Monthly Reset:</strong> Monthly scores reset at the start of each month</li>
+            </ul>
+            <h6>Monthly Rewards (Top 3):</h6>
+            <ul>
+                <li>🥇 <strong>1st Place:</strong> $50.00</li>
+                <li>🥈 <strong>2nd Place:</strong> $25.00</li>
+                <li>🥉 <strong>3rd Place:</strong> $10.00</li>
+            </ul>
+            <p class="mb-0 small text-muted">
+                <strong>Note:</strong> Time complexity tracking and optimal solution detection are coming in future updates!
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enable Bootstrap tabs
+var triggerTabList = [].slice.call(document.querySelectorAll('#leaderboardTabs button'))
+triggerTabList.forEach(function (triggerEl) {
+  var tabTrigger = new bootstrap.Tab(triggerEl)
+  triggerEl.addEventListener('click', function (event) {
+    event.preventDefault()
+    tabTrigger.show()
+  })
+})
+</script>
+{% endblock content %}
